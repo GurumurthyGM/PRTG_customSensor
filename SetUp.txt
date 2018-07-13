@@ -1,0 +1,18 @@
+Install PRTG on windows machine
+	RAM=3GB; CPUs=2 ; HDD=100GB
+	
+To install python libs in PRTG python environment:
+	Goto --> PRTG installed directory --> Python3X
+	Place "get-pip.py" script in the same directory.
+
+	Run command prompt(Cntl+righClick --> Open command window here)
+
+	Run the following command to install python pip utility 
+		python get-pip.py
+		
+	Now goto Scripts directory of python and run command to install requests.
+		pip install requests
+		
+Using custom python scripts in PRTG:
+	place all python sensor scripts @ \<PRTG installed directory>\Custom Sensors\python\
+	While adding custom sensors select required sensor scripts.
