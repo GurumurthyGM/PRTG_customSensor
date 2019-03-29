@@ -8,9 +8,9 @@ __author__="Guru"
 import requests
 import sys, json
 from paepy.ChannelDefinition import CustomSensorResult
+from time import sleep
 
-
-#data = {"host":"172.25.100.142","params":"FlowPoint"}
+#data = {"host":"172.25.100.142","params":"Port_Eth"}
 data = json.loads(sys.argv[1])
 
 ipaddr = data['host']
@@ -19,7 +19,7 @@ objs = data['params'].split()
 
 if len(objs) == 0:
     result = CustomSensorResult()
-    result.add_error("Please provide Eth port's objects as parametes --> Port_Eth (@ Additional Parameters while adding sensor)")
+    result.add_error("Please provide Eth port's objects as parametes --> Port_Eth OR Port_Eth-cap-c-s-p (@ Additional Parameters while adding sensor)")
     print(result.get_json_result())
     sys.exit(-1)
 
@@ -42,6 +42,7 @@ def NeSession():
 def NeGetObjects(ip,Objects):
     try:
         s=NeSession()
+        
         try:
             url = "http://"+ip+":20080/NMSRequest/IntervalStats?NoHTML=true&Start=0&Last=0&Type=0&Objects="+Objects
             re = s.get(url)
@@ -59,15 +60,25 @@ def NeGetObjects(ip,Objects):
         print(e)
 
 PM = NeGetObjects(ipaddr,objlist)
+d_pmp={}
+for (x,y,z) in PM:
+    d_pmp[x.split()[0]] = dict(zip(y.split(),z.split()))
+
+sleep(15)
+
+PM = NeGetObjects(ipaddr,objlist)
 d_pm={}
 for (x,y,z) in PM:
     d_pm[x.split()[0]] = dict(zip(y.split(),z.split()))
-    
-    
+
 # create sensor result
 result = CustomSensorResult("BW monitor: {}".format(ipaddr))
 for k,v in d_pm.items():
-    result.add_channel(channel_name="{}_{}".format(k,"RX"), unit="Mbps", value=int(d_pm[k]["-OctetsReceivedOK"])*8 / 900 / 1048576, is_float=True, decimal_mode='Auto' )
+    time_ = int(d_pm[k]["-Timestamp"]) - int(d_pmp[k]["-Timestamp"])
+    tx = int(d_pm[k]["-OctetsTransmittedOK"]) - int(d_pmp[k]["-OctetsTransmittedOK"])
+    rx = int(d_pm[k]["-OctetsReceivedOK"]) - int(d_pmp[k]["-OctetsReceivedOK"])
+    result.add_channel(channel_name="{}_{}".format(k,"TX"), unit="Mbps", value=tx*8 / time_ / 1048576, is_float=True, decimal_mode='Auto' )
+    result.add_channel(channel_name="{}_{}".format(k,"RX"), unit="Mbps", value=rx*8 / time_ / 1048576, is_float=True, decimal_mode='Auto' )
 
     
 print(result.get_json_result())

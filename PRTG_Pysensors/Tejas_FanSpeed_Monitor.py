@@ -14,7 +14,7 @@ from paepy.ChannelDefinition import CustomSensorResult
 
 
 data = json.loads(sys.argv[1])
-#data = {"host":"172.25.28.222"}
+#data = {"host":"192.168.105.65"}
 
 ip=data['host']
 
@@ -42,28 +42,24 @@ router_output = connection.read_until(b"Password:", reading_timeout)
 connection.write(supassword + b" \n")
 router_output = connection.read_until(b">", reading_timeout)
 
-connection.write(b"/usr/sbin/tejas/fpga_scripts/temsense.sh | grep 'Read value' \n")
-fpgadata = connection.read_until(b">", reading_timeout)
-
-if b'Value of offset' not in fpgadata:
-    connection.write(b"/usr/sbin/tejas/fpga_scripts/temsense_6.sh | grep 'Read value' \n")
-    fpgadata = connection.read_until(b">", reading_timeout)
+connection.write(b'echo "0 9 0 A 0 B 0 C 0 D 0 E 0 F q" | /usr/sbin/tejas/test /dev/slot15/fanfpga0 | grep "Read value" \n')
+fandata = connection.read_until(b">", reading_timeout)
 
 connection.close()
 
-if b'Value of offset' not in fpgadata:
+if b'Value of offset' not in fandata:
     result = CustomSensorResult()
-    result.add_error("Sorry!, the node might not support to view FPGA temperature")
+    result.add_error("Sorry! the node might not support to view FAN speed")
     print(result.get_json_result())
     sys.exit(-1)
 
-fpgadata = [fa for fa in fpgadata.splitlines() if b"Value of offset" in fa]
+fandata = [fn for fn in fandata.splitlines() if b"Value of offset" in fn]
 
+result = CustomSensorResult("Fan speed monitoring @: {}".format(ip))
 
-result = CustomSensorResult("FPGA temperature monitoring @: {}".format(ip))
-
-for fno, fpga in enumerate(fpgadata):
-    temp = eval(fpga.split(b"=")[1].split()[0]) - eval('0x180')
-    result.add_channel(channel_name="FPGA_"+str(fno+1), unit="Temperature", value=temp, decimal_mode='Auto')
+for fno, fan in enumerate(fandata):
+    speed = eval(fan.split(b"=")[1].split()[0])
+    if fno < 6:
+        result.add_channel(channel_name="FAN_"+str(fno+1), unit="%", value=speed*100/255, decimal_mode='Auto')
 
 print(result.get_json_result())

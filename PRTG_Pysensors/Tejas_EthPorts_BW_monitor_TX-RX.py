@@ -23,7 +23,7 @@ objs = data['params'].split()
 
 if len(objs) == 0:
     result = CustomSensorResult()
-    result.add_error("Please provide Eth port's objects as parametes --> Port_Eth")
+    result.add_error("Please provide Eth port's objects as parametes --> Port_Eth (@ Additional Parameters while adding sensor)")
     print(result.get_json_result())
     sys.exit(-1)
 
@@ -46,8 +46,12 @@ def NeSession():
 def NeGetObjects(ip,Objects):
     try:
         s=NeSession()
-        url = "http://"+ip+":20080/NMSRequest/IntervalStats?NoHTML=true&Start=1&Last=1&Type=0&Objects="+Objects
-        re = s.get(url)
+        try:
+            url = "http://"+ip+":20080/NMSRequest/IntervalStats?NoHTML=true&Start=0&Last=0&Type=0&Objects="+Objects
+            re = s.get(url)
+        except:
+            url = "https://"+ip+"/NMSRequest/IntervalStats?NoHTML=true&Start=0&Last=0&Type=0&Objects="+Objects
+            re = s.get(url, verify=False)
         data = re.text.strip()
         #print(data)
         if 'no objects' in data:
@@ -67,10 +71,9 @@ for (x,y,z) in PM:
 # create sensor result
 result = CustomSensorResult("BW monitor: {}".format(ipaddr))
 for k,v in d_pm.items():
-    result.add_channel(channel_name="{}_{}".format(k,"TX"), unit="Mbps", value=int(d_pm[k]["-OctetsTx"])*8 / 900 / 1048576 )
-    result.add_channel(channel_name="{}_{}".format(k,"RX"), unit="Mbps", value=int(d_pm[k]["-OctetsRx"])*8 / 900 / 1048576 )
+    result.add_channel(channel_name="{}_{}".format(k,"TX"), unit="Mbps", value=int(d_pm[k]["-OctetsTransmittedOK"])*8 / 900 / 1048576, is_float=True, decimal_mode='Auto' )
+    result.add_channel(channel_name="{}_{}".format(k,"RX"), unit="Mbps", value=int(d_pm[k]["-OctetsReceivedOK"])*8 / 900 / 1048576, is_float=True, decimal_mode='Auto' )
 
-    
 print(result.get_json_result())
 
 

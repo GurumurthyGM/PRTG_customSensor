@@ -12,7 +12,7 @@ from pprint import pprint
 from paepy.ChannelDefinition import CustomSensorResult
 
 
-#data = {"host":"172.25.23.23","params":"SFP"}
+data = {"host":"172.25.28.117","params":"SFP-1-1-1"}
 data = json.loads(sys.argv[1])
 
 ip = data['host']
@@ -20,7 +20,7 @@ objs = data['params'].split()
 
 if len(objs) == 0:
     result = CustomSensorResult()
-    result.add_error("Parameters_required = SFP_Objects seperated space max 25 eg: SFP or SFP-1-11-1 SFP-1-10-5")
+    result.add_error("Parameters_required = SFP_Objects seperated space max 25 eg: SFP or SFP-1-11-1 SFP-1-10-5 (@ Additional Parameters while adding sensor)")
     print(result.get_json_result())
     sys.exit(-1)
 
@@ -40,8 +40,13 @@ def NeSession():
 def NeGetObjects(ip,ObjectList):
     try:
         s = NeSession()
-        url = "http://"+ip+":20080/NMSRequest/GetObjects?NoHTML=true&Objects="+ObjectList
-        re = s.get(url)
+        try:
+            url = "http://"+ip+":20080/NMSRequest/GetObjects?NoHTML=true&Objects="+ObjectList
+            re = s.get(url)
+        except:
+            url = "https://"+ip+"/NMSRequest/GetObjects?NoHTML=true&Objects="+ObjectList
+            re = s.get(url, verify=False)
+
         sfpdata = re.text.strip().splitlines()
         sfps = []
         for sfp in sfpdata:
@@ -62,7 +67,7 @@ result = CustomSensorResult("Optical Power monitor on SFPs @: "+ip)
 sfps = NeGetObjects(ip,sfplist)
 if sfps:
     for sfp in sfps:
-        result.add_channel(channel_name=sfp['ObjectName']+'_Rx', unit="dBm", value=sfp['-RxPower'], is_float=True)
-        result.add_channel(channel_name=sfp['ObjectName']+'_Tx', unit="dBm", value=sfp['-TxPower'], is_float=True)
+        result.add_channel(channel_name=sfp['ObjectName']+'_Rx', unit="dBm", value=sfp['-RxPower'], is_float=True, decimal_mode='Auto')
+        result.add_channel(channel_name=sfp['ObjectName']+'_Tx', unit="dBm", value=sfp['-TxPower'], is_float=True, decimal_mode='Auto')
 
 pprint(result.get_json_result())

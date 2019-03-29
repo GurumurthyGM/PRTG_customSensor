@@ -10,7 +10,7 @@ import sys, json
 from math import log10
 from paepy.ChannelDefinition import CustomSensorResult
 
-#data = {"host":"172.25.28.121","params":"MSACFP"}
+data = {"host":"172.25.25.31","params":"MSACFP"}
 data = json.loads(sys.argv[1])
 
 ip = data['host']
@@ -18,7 +18,7 @@ objs = data['params'].split()
 
 if len(objs) == 0:
     result = CustomSensorResult()
-    result.add_error("Parameters_required = CFP_Objects seperated space, max 25 eg: MSACFP or MSACFP-1-11-511 MSACFP-1-10-505")
+    result.add_error("Parameters_required = CFP_Objects seperated space, max 25 eg: MSACFP or MSACFP-1-11-511 MSACFP-1-10-505 (@ Additional Parameters while adding sensor)")
     print(result.get_json_result())
     sys.exit(-1)
 
@@ -38,8 +38,12 @@ def NeSession():
 def NeGetObjects(ip,Objectlist):
     try:
         s = NeSession()
-        url = "http://"+ip+":20080/NMSRequest/GetObjects?NoHTML=true&Objects="+Objectlist
-        re = s.get(url)
+        try:
+            url = "http://"+ip+":20080/NMSRequest/GetObjects?NoHTML=true&Objects="+Objectlist
+            re = s.get(url)
+        except:
+            url = "https://"+ip+"/NMSRequest/GetObjects?NoHTML=true&Objects="+Objectlist
+            re = s.get(url, verify=False)
         cfpdata = re.text.strip().splitlines()
         cfps = []
         for cfp in cfpdata:
@@ -65,14 +69,14 @@ if cfps:
         for i in filter(None,cfpRX):
             RX_mW = RX_mW + float(i.split("=")[1])
         RX_dbm = 10.*log10(RX_mW) if RX_mW > 0 else 0
-        result.add_channel(channel_name=cfp['ObjectName']+'_Rx', unit="dBm", value=RX_dbm,  is_float=True)
+        result.add_channel(channel_name=cfp['ObjectName']+'_Rx', unit="dBm", value=RX_dbm,  is_float=True, decimal_mode='Auto')
 
         TX_mW=0
         cfpTX=cfp['-TxPower'].split(";")
         for i in filter(None,cfpTX):
             TX_mW = TX_mW + float(i.split("=")[1])
         TX_dbm = 10.*log10(TX_mW) if TX_mW > 0 else 0
-        result.add_channel(channel_name=cfp['ObjectName']+'_Tx', unit="dBm", value=TX_dbm, is_float=True)
+        result.add_channel(channel_name=cfp['ObjectName']+'_Tx', unit="dBm", value=TX_dbm, is_float=True, decimal_mode='Auto')
 
 
 print(result.get_json_result())
